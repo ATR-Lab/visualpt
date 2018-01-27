@@ -11,6 +11,7 @@ import csv
 # import timeit
 import time
 import pandas as pd
+import numpy as np
 # import time
 # import openbci_realtime_ver1
 
@@ -66,14 +67,23 @@ with serial.Serial(ser.name, 115200, timeout = 1, parity = serial.PARITY_NONE, s
       for temp_i in range(1, num_accel): 
         raw_accel[temp_i - 1] = raw_data[25 + 2 * (temp_i - 1):27 + 2 * (temp_i - 1)] # accel x, y, and z
       
-      ch1 = str(int(binascii.hexlify(raw_EMG[1]), 16) * val.scaleFac)
-      ch2 = str(int(binascii.hexlify(raw_EMG[2]), 16) * val.scaleFac)
-      ch3 = str(int(binascii.hexlify(raw_EMG[3]), 16) * val.scaleFac)
-      ch4 = str(int(binascii.hexlify(raw_EMG[4]), 16) * val.scaleFac)
-      ch5 = str(int(binascii.hexlify(raw_EMG[5]), 16) * val.scaleFac)
-      ch6 = str(int(binascii.hexlify(raw_EMG[6]), 16) * val.scaleFac)
-      ch7 = str(int(binascii.hexlify(raw_EMG[7]), 16) * val.scaleFac)
-      ch8 = str(int(binascii.hexlify(raw_EMG[8]), 16) * val.scaleFac)
+      # ch1 = str(int(binascii.hexlify(raw_EMG[1]), 16) * val.scaleFac)
+      # ch2 = str(int(binascii.hexlify(raw_EMG[2]), 16) * val.scaleFac)
+      # ch3 = str(int(binascii.hexlify(raw_EMG[3]), 16) * val.scaleFac)
+      # ch4 = str(int(binascii.hexlify(raw_EMG[4]), 16) * val.scaleFac)
+      # ch5 = str(int(binascii.hexlify(raw_EMG[5]), 16) * val.scaleFac)
+      # ch6 = str(int(binascii.hexlify(raw_EMG[6]), 16) * val.scaleFac)
+      # ch7 = str(int(binascii.hexlify(raw_EMG[7]), 16) * val.scaleFac)
+      # ch8 = str(int(binascii.hexlify(raw_EMG[8]), 16) * val.scaleFac)
+
+      ch1 = int(binascii.hexlify(raw_EMG[1]), 16) * val.scaleFac
+      ch2 = int(binascii.hexlify(raw_EMG[2]), 16) * val.scaleFac
+      ch3 = int(binascii.hexlify(raw_EMG[3]), 16) * val.scaleFac
+      ch4 = int(binascii.hexlify(raw_EMG[4]), 16) * val.scaleFac
+      ch5 = int(binascii.hexlify(raw_EMG[5]), 16) * val.scaleFac
+      ch6 = int(binascii.hexlify(raw_EMG[6]), 16) * val.scaleFac
+      ch7 = int(binascii.hexlify(raw_EMG[7]), 16) * val.scaleFac
+      ch8 = int(binascii.hexlify(raw_EMG[8]), 16) * val.scaleFac
 
       # save raw_data
       #  print(ch1 + "\t" + ch2 + "\t" + ch3 + "\t" + ch4 + "\t" + ch5 + "\t" + ch6 + "\t" + ch7 + "\t" + ch8)
@@ -87,7 +97,40 @@ with serial.Serial(ser.name, 115200, timeout = 1, parity = serial.PARITY_NONE, s
       if( (endTime - startTime) >= 5):
         # df = pd.DataFrame(columns=['Ch1','Ch2','Ch3','Ch4','Ch5','Ch6','Ch7', 'Ch8'])
         startTime = endTime
+        # df = df.reset_index()
+        print("DFFFFFFF")
         print(df)
+        # print(df.ix[:, [0, 1]])
+        # reference channels; creating bipolar EMG channel
+        df_ref_ch = df.ix[:, [0, 1]]
+        
+        # df_ref_ch2 = df_ref_ch.mean(axis = 1) # mean horizontally
+        df_ref_ch2 = df_ref_ch.mean(axis = 1, skipna=True) # mean horizontally
+        # df_ref_ch3 = df.ix[:, 2:7].sub(df_ref_ch2, axis=0)
+
+        # df_ref_ch['avg'] = df[['CH1', 'CH2']].mean(axis = 1)
+
+        # np.nan_to_num(df_ref_ch)
+        # print(df.describe())
+
+        # print(df_ref_ch2)
+
+        # detrend
+        # func = lambda x: x - df_ref_ch2
+        # df_detrend = df.ix[:, 1:7].applymap(func)
+        # df_detrend = df.applymap(func)
+
+        # df_detrend = df.subtract(df_ref_ch2)
+        # df_detrend = df - df_ref_ch2
+        df_detrend = df.ix[:, 2:7].sub(df_ref_ch2, axis=0)
+        # 0.362345
+        print("DETRENDDDDD")
+        print(df_detrend)
+
+        # print(df.ix[:, 1:7])
+        # bandstop
+        # bandpass
+
         df = df.iloc[0:0]
         # df = pd.DataFrame(columns=df.columns)
       
