@@ -98,37 +98,28 @@ with serial.Serial(ser.name, 115200, timeout = 1, parity = serial.PARITY_NONE, s
         # df = pd.DataFrame(columns=['Ch1','Ch2','Ch3','Ch4','Ch5','Ch6','Ch7', 'Ch8'])
         startTime = endTime
         # df = df.reset_index()
-        print("DFFFFFFF")
-        print(df)
+        # print("DFFFFFFF")
+        # print(df)
         # print(df.ix[:, [0, 1]])
         # reference channels; creating bipolar EMG channel
         df_ref_ch = df.ix[:, [0, 1]]
         
         # df_ref_ch2 = df_ref_ch.mean(axis = 1) # mean horizontally
         df_ref_ch2 = df_ref_ch.mean(axis = 1, skipna=True) # mean horizontally
-        # df_ref_ch3 = df.ix[:, 2:7].sub(df_ref_ch2, axis=0)
+        df_ref_ch3 = df.ix[:, 2:7].sub(df_ref_ch2, axis=0)
+        print(df_ref_ch3)
 
         # df_ref_ch['avg'] = df[['CH1', 'CH2']].mean(axis = 1)
 
         # np.nan_to_num(df_ref_ch)
-        # print(df.describe())
 
         # print(df_ref_ch2)
 
         # detrend
-        # func = lambda x: x - df_ref_ch2
-        # df_detrend = df.ix[:, 1:7].applymap(func)
-        # df_detrend = df.applymap(func)
-
-        # df_detrend = df.subtract(df_ref_ch2)
-        # df_detrend = df - df_ref_ch2
-        df_detrend = df.ix[:, 2:7].sub(df_ref_ch2, axis=0)
-        # 0.362345
-        print("DETRENDDDDD")
-        print(df_detrend)
-
-        # print(df.ix[:, 1:7])
+        df_deTrend = df_ref_ch3.sub(df_ref_ch3.mean(axis = 0, skipna = True), axis = 1)
+        # print(df_deTrend)
         # bandstop
+
         # bandpass
 
         df = df.iloc[0:0]
