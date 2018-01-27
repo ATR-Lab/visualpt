@@ -12,6 +12,8 @@ import csv
 import time
 import pandas as pd
 import numpy as np
+from scipy import signal
+from scipy.signal import butter, lfilter, iirnotch, filtfilt
 # import time
 # import openbci_realtime_ver1
 
@@ -39,6 +41,12 @@ val.V_ref = 4.5 # reference voltages (V); set by its hardware
 val.gain = 24.0 # assumed gain setting; set by its Arduino code
 val.scaleFac = val.V_ref / val.gain / (2**23 - 1) # scale factor
 val.acc_scaleFac = 0.002 / 2**4 # accelerometer scale factor
+# bandstop
+val.Fs_bs = 250.0 # sample frequency (Hz)
+val.Fo_bs = 60.0 # bandstop frequency (Hz)
+val.q_bs = 35.0 # filter bandwidth
+val.w0_bs = val.Fo_bs / (val.Fs_bs / 2)
+
 # check
 print(ser.name) # check which port was really used
 print(val.V_ref)
@@ -106,8 +114,8 @@ with serial.Serial(ser.name, 115200, timeout = 1, parity = serial.PARITY_NONE, s
         
         # df_ref_ch2 = df_ref_ch.mean(axis = 1) # mean horizontally
         df_ref_ch2 = df_ref_ch.mean(axis = 1, skipna=True) # mean horizontally
-        df_ref_ch3 = df.ix[:, 2:7].sub(df_ref_ch2, axis=0)
-        print(df_ref_ch3)
+        df_ref_ch3 = df.ix[:, 2:8].sub(df_ref_ch2, axis=0)
+        # print(df_ref_ch3)
 
         # df_ref_ch['avg'] = df[['CH1', 'CH2']].mean(axis = 1)
 
@@ -118,7 +126,17 @@ with serial.Serial(ser.name, 115200, timeout = 1, parity = serial.PARITY_NONE, s
         # detrend
         df_deTrend = df_ref_ch3.sub(df_ref_ch3.mean(axis = 0, skipna = True), axis = 1)
         # print(df_deTrend)
+        df_deTrend1 = df_deTrend.transpose()
+        # print(df_deTrend1)
+        
         # bandstop
+        b_bs, a_bs = signal.iirnotch(val.w0_bs, val.q_bs)
+        # for temp_i in range(0, 4): 
+        #   y_bs = lfilter(b_bs, a_bs, df_deTrend[:, temp_i])
+        # y_bs1 = lfilter(b_bs, a_bs, df_deTrend1)
+        y_bs1 = filtfilt(b_bs, a_bs, df_deTrend1)
+        y_bs2 = y_bs1.transpose()
+        print(y_bs2)
 
         # bandpass
 
