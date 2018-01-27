@@ -14,6 +14,7 @@ import pandas as pd
 import numpy as np
 from scipy import signal
 from scipy.signal import butter, lfilter, iirnotch, filtfilt
+import csv
 # import time
 # import openbci_realtime_ver1
 
@@ -46,6 +47,15 @@ val.Fs_bs = 250.0 # sample frequency (Hz)
 val.Fo_bs = 60.0 # bandstop frequency (Hz)
 val.q_bs = 35.0 # filter bandwidth
 val.w0_bs = val.Fo_bs / (val.Fs_bs / 2)
+# bandpass
+val.Fs_bp = val.Fs_bs # sample frequency (Hz)
+val.Nq_bp = 0.5 * val.Fs_bp # Nyquist
+val.cutoff_low = 50 / val.Nq_bp # low cutoff frequency (Hz)
+val.cutoff_high = 100 / val.Nq_bp # high cutoff frequency (Hz)
+
+# save data
+# userList = []
+# benList = []
 
 # check
 print(ser.name) # check which port was really used
@@ -130,18 +140,41 @@ with serial.Serial(ser.name, 115200, timeout = 1, parity = serial.PARITY_NONE, s
         # print(df_deTrend1)
         
         # bandstop
-        b_bs, a_bs = signal.iirnotch(val.w0_bs, val.q_bs)
+        b_bs, a_bs = iirnotch(val.w0_bs, val.q_bs)
         # for temp_i in range(0, 4): 
         #   y_bs = lfilter(b_bs, a_bs, df_deTrend[:, temp_i])
         # y_bs1 = lfilter(b_bs, a_bs, df_deTrend1)
         y_bs1 = filtfilt(b_bs, a_bs, df_deTrend1)
         y_bs2 = y_bs1.transpose()
-        print(y_bs2)
+        # print(y_bs1)
 
         # bandpass
+        b_bp, a_bp = butter(4, [val.cutoff_low, val.cutoff_high], 'band')
+        y_bp1 = filtfilt(b_bp, a_bp, y_bs1)
+        y_bp2 = y_bp1.transpose()
+        # print(y_bp1)
+
+        # average by channel
+        y_avg1 = y_bp2.mean(axis = 0) # mean horizontally
+        print("avg")
+        print(y_avg1)
+
+
+        # RMS
+        # def sin_rms(RMS_a1): 
+          # y_rms1 = a * sin
+
+
+        # write CSV files
+        # with open('training_ver1.csv', 'r') as userFile: 
+        #   userFileReader = csv.reader(userFile)
+        #   for row in userFileReader: 
+        #     userList.append(row)
 
         df = df.iloc[0:0]
         # df = pd.DataFrame(columns=df.columns)
+
+
       
     
       
