@@ -14,6 +14,7 @@ from scipy import signal
 from scipy.signal import butter, iirnotch, filtfilt, lfilter
 import csv
 
+output_file = open('training_ver5.csv', 'w') 
 
 ## initial set up
 class byte1(): 
@@ -54,7 +55,7 @@ print("Parameters initialized")
 
 
 ## real time
-with serial.Serial(ser.name, 115200, timeout = 1, parity = serial.PARITY_NONE, stopbits = serial.STOPBITS_ONE) as ser1: 
+with output_file as csv_file, serial.Serial(ser.name, 115200, timeout = 1, parity = serial.PARITY_NONE, stopbits = serial.STOPBITS_ONE) as ser1: 
   ser1.write('b')
   val.startTime = time.time()
 
@@ -98,7 +99,7 @@ with serial.Serial(ser.name, 115200, timeout = 1, parity = serial.PARITY_NONE, s
         data_deTrend = data_refCH3.sub(data_refCH3.mean(axis = 0, skipna = True), axis = 1)
         # print(data_deTrend)
         data_deTrend1 = data_deTrend.transpose()
-        # print(data_deTrend1)
+        print(data_deTrend1)
         print("Detrend")
 
         # bandstop
@@ -106,11 +107,11 @@ with serial.Serial(ser.name, 115200, timeout = 1, parity = serial.PARITY_NONE, s
         # y_bs1 = lfilter(b_bs, a_bs, df_deTrend1)
         data_bs1 = filtfilt(val.b_bs, val.a_bs, data_deTrend1)
         data_bs2 = data_bs1.transpose()
-        # print(data_bs1)
+        print(data_bs1)
         print("Notch filter")
 
         # bandpass
-        val.b_bp, val.a_bp = butter(8, [val.cutoff_low, val.cutoff_high], 'band')
+        val.b_bp, val.a_bp = butter(4, [val.cutoff_low, val.cutoff_high], 'band')
         data_bp1 = filtfilt(val.b_bp, val.a_bp, data_bs1)
         data_bp2 = data_bp1.transpose()
         print("Bandpass")
@@ -128,10 +129,10 @@ with serial.Serial(ser.name, 115200, timeout = 1, parity = serial.PARITY_NONE, s
 
         ## save
         # write CSV files
-        output_file = open('training_ver3.csv', 'w') 
-        with output_file:
-          writer = csv.writer(output_file)
-          for output_line in data_bp2:
-            writer.writerow(output_line)
-
+        # output_file = open('training_ver4.csv', 'w') 
+        # with output_file:
+        writer = csv.writer(csv_file, delimiter=",", lineterminator='\n')
+        for output_line in data_bp2:
+          writer.writerow(output_line)
+        
         data_df1 = data_df1.iloc[0:0]
