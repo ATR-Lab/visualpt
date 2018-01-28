@@ -7,16 +7,13 @@ import sys
 sys.path.append("/Users/dkim/Documents/Programming/Python/pyserial-3.4")
 import serial
 import binascii
-import csv
-# import timeit
 import time
 import pandas as pd
 import numpy as np
 from scipy import signal
-from scipy.signal import butter, lfilter, iirnotch, filtfilt
+from scipy.signal import butter, iirnotch, filtfilt, lfilter
 import csv
-# import time
-# import openbci_realtime_ver1
+
 
 ## initial set up
 class byte1(): 
@@ -25,8 +22,7 @@ class val():
   pass
 class temp():
   pass
-# class data1():
-#   pass
+# openBCI
 ser = serial.Serial('/dev/tty.usbserial-DM00PZYR') # open serial port tty.usbserial-DM00PZYR
 num_sample = ""
 num_ch = 9 # 6 ch + 2 reference ch
@@ -49,32 +45,20 @@ val.q_bs = 35.0 # filter bandwidth
 val.w0_bs = val.Fo_bs / (val.Fs_bs / 2)
 # bandpass
 val.Fs_bp = val.Fs_bs # sample frequency (Hz)
-val.Nq_bp = 0.5 * val.Fs_bp # Nyquist
+val.Nq_bp = 0.5 * val.Fs_bp # Nyquist frequency
 val.cutoff_low = 50 / val.Nq_bp # low cutoff frequency (Hz)
 val.cutoff_high = 100 / val.Nq_bp # high cutoff frequency (Hz)
-
-# save data
-# userList = []
-# benList = []
-
 # check
 print(ser.name) # check which port was really used
-print(val.V_ref)
-print(val.gain)
-print(val.scaleFac)
-print(byte1.start1)
+print("Parameters initialized")
 
 
 ## real time
-temp_trial = 1
-end_trial = 4
 with serial.Serial(ser.name, 115200, timeout = 1, parity = serial.PARITY_NONE, stopbits = serial.STOPBITS_ONE) as ser1: 
-  # button: ON
   ser1.write('b')
-  temp_block = 1
-  startTime = time.time()
+  val.startTime = time.time()
 
-  df = pd.DataFrame(columns=['CH1','CH2','CH3','CH4','CH5','CH6','CH7', 'CH8'])
+  data_df1 = pd.DataFrame(columns = ['CH1', 'CH2', 'CH3', 'CH4', 'CH5', 'CH6', 'CH7', 'CH8'])
   while(1):
     temp.s1 = ser1.read(1) # read up to ten bytes (timeout)
     if binascii.hexlify(temp.s1) == "a0":
@@ -84,15 +68,6 @@ with serial.Serial(ser.name, 115200, timeout = 1, parity = serial.PARITY_NONE, s
         raw_EMG[temp_i] = raw_data[1 + 3 * (temp_i - 1):4 + 3 * (temp_i - 1)] # EMG data
       for temp_i in range(1, num_accel): 
         raw_accel[temp_i - 1] = raw_data[25 + 2 * (temp_i - 1):27 + 2 * (temp_i - 1)] # accel x, y, and z
-      
-      # ch1 = str(int(binascii.hexlify(raw_EMG[1]), 16) * val.scaleFac)
-      # ch2 = str(int(binascii.hexlify(raw_EMG[2]), 16) * val.scaleFac)
-      # ch3 = str(int(binascii.hexlify(raw_EMG[3]), 16) * val.scaleFac)
-      # ch4 = str(int(binascii.hexlify(raw_EMG[4]), 16) * val.scaleFac)
-      # ch5 = str(int(binascii.hexlify(raw_EMG[5]), 16) * val.scaleFac)
-      # ch6 = str(int(binascii.hexlify(raw_EMG[6]), 16) * val.scaleFac)
-      # ch7 = str(int(binascii.hexlify(raw_EMG[7]), 16) * val.scaleFac)
-      # ch8 = str(int(binascii.hexlify(raw_EMG[8]), 16) * val.scaleFac)
 
       ch1 = int(binascii.hexlify(raw_EMG[1]), 16) * val.scaleFac
       ch2 = int(binascii.hexlify(raw_EMG[2]), 16) * val.scaleFac
@@ -102,86 +77,61 @@ with serial.Serial(ser.name, 115200, timeout = 1, parity = serial.PARITY_NONE, s
       ch6 = int(binascii.hexlify(raw_EMG[6]), 16) * val.scaleFac
       ch7 = int(binascii.hexlify(raw_EMG[7]), 16) * val.scaleFac
       ch8 = int(binascii.hexlify(raw_EMG[8]), 16) * val.scaleFac
-
-      # save raw_data
       #  print(ch1 + "\t" + ch2 + "\t" + ch3 + "\t" + ch4 + "\t" + ch5 + "\t" + ch6 + "\t" + ch7 + "\t" + ch8)
 
-      # df2 = pd.DataFrame([ch1, ch2, ch3, ch4, ch5, ch6, ch7, ch8])
       channels =[{'CH1': ch1, 'CH2': ch2, 'CH3': ch3, 'CH4': ch4, 'CH5': ch5, 'CH6': ch6, 'CH7': ch7, 'CH8': ch8}]
-      df2 = pd.DataFrame(channels)
-      df = df.append(df2)
-      endTime = time.time()
-      # print("DIFF: %f", (endTime - startTime))
-      if( (endTime - startTime) >= 5):
-        # df = pd.DataFrame(columns=['Ch1','Ch2','Ch3','Ch4','Ch5','Ch6','Ch7', 'Ch8'])
-        startTime = endTime
-        # df = df.reset_index()
-        # print("DFFFFFFF")
-        # print(df)
-        # print(df.ix[:, [0, 1]])
+      data_df2 = pd.DataFrame(channels)
+      data_df1 = data_df1.append(data_df2)
+      val.endTime = time.time()
+      if( (val.endTime - val.startTime) >= 5):
+        val.startTime = val.endTime
+        print("Recorded")
+
         # reference channels; creating bipolar EMG channel
-        df_ref_ch = df.ix[:, [0, 1]]
-        
-        # df_ref_ch2 = df_ref_ch.mean(axis = 1) # mean horizontally
-        df_ref_ch2 = df_ref_ch.mean(axis = 1, skipna=True) # mean horizontally
-        df_ref_ch3 = df.ix[:, 2:8].sub(df_ref_ch2, axis=0)
-        # print(df_ref_ch3)
-
-        # df_ref_ch['avg'] = df[['CH1', 'CH2']].mean(axis = 1)
-
-        # np.nan_to_num(df_ref_ch)
-
-        # print(df_ref_ch2)
+        data_refCH1 = data_df1.ix[:, [0, 1]]
+        data_refCH2 = data_refCH1.mean(axis = 1, skipna = True) # mean horizontally
+        data_refCH3 = data_df1.ix[:, 2:8].sub(data_refCH2, axis = 0)
+        # print(data_refCH3)
+        print("Reference CH")
 
         # detrend
-        df_deTrend = df_ref_ch3.sub(df_ref_ch3.mean(axis = 0, skipna = True), axis = 1)
-        # print(df_deTrend)
-        df_deTrend1 = df_deTrend.transpose()
-        # print(df_deTrend1)
-        
+        data_deTrend = data_refCH3.sub(data_refCH3.mean(axis = 0, skipna = True), axis = 1)
+        # print(data_deTrend)
+        data_deTrend1 = data_deTrend.transpose()
+        # print(data_deTrend1)
+        print("Detrend")
+
         # bandstop
-        b_bs, a_bs = iirnotch(val.w0_bs, val.q_bs)
-        # for temp_i in range(0, 4): 
-        #   y_bs = lfilter(b_bs, a_bs, df_deTrend[:, temp_i])
+        val.b_bs, val.a_bs = iirnotch(val.w0_bs, val.q_bs)
         # y_bs1 = lfilter(b_bs, a_bs, df_deTrend1)
-        y_bs1 = filtfilt(b_bs, a_bs, df_deTrend1)
-        y_bs2 = y_bs1.transpose()
-        # print(y_bs1)
+        data_bs1 = filtfilt(val.b_bs, val.a_bs, data_deTrend1)
+        data_bs2 = data_bs1.transpose()
+        # print(data_bs1)
+        print("Notch filter")
 
         # bandpass
-        b_bp, a_bp = butter(4, [val.cutoff_low, val.cutoff_high], 'band')
-        y_bp1 = filtfilt(b_bp, a_bp, y_bs1)
-        y_bp2 = y_bp1.transpose()
-        # print(y_bp1)
+        val.b_bp, val.a_bp = butter(8, [val.cutoff_low, val.cutoff_high], 'band')
+        data_bp1 = filtfilt(val.b_bp, val.a_bp, data_bs1)
+        data_bp2 = data_bp1.transpose()
+        print("Bandpass")
+        print(data_bp2)
 
         # average by channel
-        y_avg1 = y_bp2.mean(axis = 0) # mean horizontally
-        print("avg")
-        print(y_avg1)
-
+        data_avg1 = data_bp2.mean(axis = 0) # mean horizontally
+        print("Average")
+        print(data_avg1)
 
         # RMS
         # def sin_rms(RMS_a1): 
-          # y_rms1 = a * sin
+          # data_rms1 = a * sin
 
 
+        ## save
         # write CSV files
-        # with open('training_ver1.csv', 'r') as userFile: 
-        #   userFileReader = csv.reader(userFile)
-        #   for row in userFileReader: 
-        #     userList.append(row)
+        output_file = open('training_ver3.csv', 'w') 
+        with output_file:
+          writer = csv.writer(output_file)
+          for output_line in data_bp2:
+            writer.writerow(output_line)
 
-        df = df.iloc[0:0]
-        # df = pd.DataFrame(columns=df.columns)
-
-
-      
-    
-      
-
-    temp_block += 1
-    if temp_trial == end_trial: 
-      # collect data
-      print('{0:2f} {1:3f} {2:4f}'.format(str(int(binascii.hexlify(raw_EMG[1]), 16) * val.scaleFac)))
-      end_trial = end_trial + 4
-      ser1.write('s')
+        data_df1 = data_df1.iloc[0:0]
